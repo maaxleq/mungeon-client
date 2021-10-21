@@ -30,12 +30,12 @@ impl Direction {
         )
     }
 
-    pub fn to_str(&self) -> &str {
+    pub fn to_string(&self) -> String {
         match self {
-            Direction::N => "N",
-            Direction::E => "E",
-            Direction::S => "S",
-            Direction::W => "W",
+            Direction::N => String::from("N"),
+            Direction::E => String::from("E"),
+            Direction::S => String::from("S"),
+            Direction::W => String::from("W"),
         }
     }
 }
@@ -112,13 +112,12 @@ impl Status {
 
         match paths.len() {
             0 => String::from("None"),
-            1 => String::from(paths[0].to_str()),
             _ => {
                 let mut s = String::new();
-                s.push_str(paths[0].to_str());
+                s += &paths[0].to_string();
 
                 for path in paths.iter().skip(1) {
-                    s.push_str(path.to_str())
+                    s += &format!(", {}", path.to_string());
                 }
 
                 s
@@ -135,12 +134,6 @@ pub struct Entity {
     pub life: u32,
     #[serde(rename = "totalvie")]
     pub total_life: u32,
-}
-
-impl Entity {
-    pub fn append_to_info(&self, info: &mut Vec<&str>) {
-        info.push("Entity: ");
-    }
 }
 
 impl MunModel for Entity {
@@ -175,12 +168,6 @@ pub struct Fight {
 impl MunModel for Fight {
     fn from_str(data: &str) -> Fight {
         serde_json::from_str(data).unwrap()
-    }
-}
-
-impl Fight {
-    pub fn append_to_info(&self, info: &mut Vec<&str>) {
-        info.push("Fight: ");
     }
 }
 

@@ -2,6 +2,7 @@ use crate::session;
 
 use console_engine::crossterm::terminal;
 use console_engine::*;
+use textwrap::*;
 
 static PIXEL_BORDER_VERTICAL: pixel::Pixel = pixel::Pixel {
     fg: Color::Reset,
@@ -15,9 +16,10 @@ static PIXEL_BORDER_HORIZONTAL: pixel::Pixel = pixel::Pixel {
     chr: '-',
 };
 
-static COLOR_INFO_BG: Color = Color::White;
-static COLOR_INFO_SUCESS: Color = Color::DarkGreen;
-static COLOR_INFO_FAILURE: Color = Color::DarkRed;
+static COLOR_INFO_BLACK_FG: Color = Color::Black;
+static COLOR_INFO_WHITE_FG: Color = Color::White;
+static COLOR_INFO_SUCESS_BG: Color = Color::DarkGreen;
+static COLOR_INFO_FAILURE_BG: Color = Color::DarkRed;
 
 struct ScreenChunk {
     x: u32,
@@ -42,29 +44,29 @@ impl GetScreenCut for ScreenCut {
                 height: height / 2,
             },
             ScreenChunk {
-                x: width / 2 + 1,
+                x: width / 2 + 2,
                 y: 0,
-                width: width - width / 2,
+                width: width - width / 2 - 1,
                 height: height / 2,
             },
             ScreenChunk {
                 x: 0,
                 y: height / 2 + 1,
                 width: width / 2,
-                height: height - height / 2,
+                height: height - height / 2 - 1,
             },
             ScreenChunk {
-                x: width / 2 + 1,
+                x: width / 2 + 2,
                 y: height / 2 + 1,
-                width: width - width / 2,
-                height: height - height / 2,
+                width: width - width / 2 - 1,
+                height: height - height / 2 - 1,
             },
         )
     }
 }
 
-pub struct Runner<'a> {
-    session: session::Session<'a>,
+pub struct Runner {
+    session: session::Session,
     ui_engine: ConsoleEngine,
     game_screen: screen::Screen,
     status_screen: screen::Screen,
@@ -73,14 +75,14 @@ pub struct Runner<'a> {
     screen_cut: ScreenCut,
 }
 
-impl<'a> Runner<'a> {
-    pub fn new(url: String) -> Runner<'a> {
+impl<'a> Runner {
+    pub fn new(url: String) -> Runner {
         let (width, height) = terminal::size().unwrap();
         let cut = ScreenCut::get(width as u32, height as u32);
 
         Runner {
             session: session::Session::new(url),
-            ui_engine: ConsoleEngine::init(width as u32, height as u32, 30).unwrap(),
+            ui_engine: ConsoleEngine::init(width as u32, height as u32, 10).unwrap(),
             game_screen: screen::Screen::new(cut.0.width, cut.0.height),
             status_screen: screen::Screen::new(cut.1.width, cut.1.height),
             keybinds_screen: screen::Screen::new(cut.2.width, cut.2.height),
@@ -143,11 +145,11 @@ impl<'a> Runner<'a> {
         );
     }
 
-    fn draw_border(&mut self) {
+    fn draw_splitters(&mut self) {
         let (width, height) = terminal::size().unwrap();
 
-        let break_x = width / 2;
-        let break_y = height / 2;
+        let break_x = self.screen_cut.0.width;
+        let break_y = self.screen_cut.0.height;
 
         for y in 0..height {
             self.ui_engine
@@ -167,23 +169,30 @@ impl<'a> Runner<'a> {
     }
 
     fn handle_input(&mut self) {
-        if self.ui_engine.is_key_pressed(KeyCode::Char('c')){
+        if self.ui_engine.is_key_pressed(KeyCode::Char('c')) {
+            self.session.clean();
             self.session.connect();
         }
-        if self.ui_engine.is_key_pressed(KeyCode::Char('d')){
+        if self.ui_engine.is_key_pressed(KeyCode::Char('d')) {
             self.session.disconnect();
+        }
+        if self.ui_engine.is_key_pressed(KeyCode::Char('l')) {
+            self.session.clean();
+            self.session.look_room();
         }
     }
 
     fn fill_game_screen(&mut self) {
         self.game_screen.print(0, 0, "MUNGEON");
-        self.game_screen.print(0, 1, format!("{}", self.session.client.base_url).as_str());
+        self.game_screen
+            .print(0, 1, format!("{}", self.session.client.base_url).as_str());
 
         if self.session.is_connected() {
-            self.game_screen.print_fbg(0, 2, "CONNECTED", COLOR_INFO_SUCESS, COLOR_INFO_BG);
-        }
-        else {
-            self.game_screen.print_fbg(0, 2, "DISCONNECTED", COLOR_INFO_FAILURE, COLOR_INFO_BG);
+            self.game_screen
+                .print_fbg(0, 2, "CONNECTED", COLOR_INFO_BLACK_FG, COLOR_INFO_SUCESS_BG);
+        } else {
+            self.game_screen
+                .print_fbg(0, 2, "DISCONNECTED", COLOR_INFO_WHITE_FG, COLOR_INFO_FAILURE_BG);
         }
     }
 
@@ -192,23 +201,28 @@ impl<'a> Runner<'a> {
     fn fill_keybinds_screen(&mut self) {
         self.keybinds_screen.print(0, 0, "[c] > (re)connect");
         self.keybinds_screen.print(0, 1, "[d] > disconnect");
+        self.keybinds_screen.print(0, 3, "[l] > look around");
     }
 
     fn fill_status_screen(&mut self) {
-        Runner::print_strs_to_screen(&mut self.status_screen, &self.session.status_info);
+        Runner::print_strings_to_screen(&mut self.status_screen, &self.session.status_info, self.screen_cut.1.width as usize);
     }
 
-    fn fill_screens(&mut self){
+    fn fill_screens(&mut self) {
         self.fill_game_screen();
         self.fill_status_screen();
         self.fill_keybinds_screen();
         self.fill_info_screen();
     }
 
-    fn print_strs_to_screen(screen: &mut screen::Screen, strs: &Vec<&'a str>){
-        for (i, s) in strs.iter().enumerate() {
-            screen.print(0, i as i32, s);
+    fn print_strings_to_screen(screen: &mut screen::Screen, strings: &Vec<String>, width: usize) {
+        let mut s_fill = String::new();
+
+        for s in strings.iter() {
+            s_fill += &format!("{}\n", s);
         }
+
+        screen.print(0, 0, fill(s_fill.as_str(), width).as_str());
     }
 
     pub fn run(&mut self) {
@@ -219,16 +233,15 @@ impl<'a> Runner<'a> {
                 break;
             }
 
-            self.handle_input();
-
             self.clear();
-            self.session.clean();
+
+            self.handle_input();
 
             self.cut_screen();
             self.adapt_size();
 
             self.fill_screens();
-            self.draw_border();
+            self.draw_splitters();
             self.draw_screens();
 
             self.display();

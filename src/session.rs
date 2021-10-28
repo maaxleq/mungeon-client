@@ -1,16 +1,21 @@
 use crate::model;
 use crate::net;
 
+use std::collections::HashMap;
+
 static ERROR_STATUS_UNINITALIZED: &'static str =
     "Error while accessing player status, status is uninitialized";
+
+pub type EntityMap = HashMap<u32, String>;
 
 #[derive(Debug)]
 pub struct Session {
     pub status: Option<model::Status>,
     pub client: net::MunHttpClient,
     pub error: Option<model::Error>,
-    pub status_info: Vec<String>,
-    pub secondary_info: Vec<String>,
+    pub fight_info: Option<model::Fight>,
+    pub entity_info: Option<model::Entity>, 
+    pub entity_map: EntityMap
 }
 
 impl Session {
@@ -19,8 +24,33 @@ impl Session {
             status: None,
             client: net::MunHttpClient::new(url),
             error: None,
-            status_info: Vec::new(),
-            secondary_info: Vec::new(),
+            fight_info: None,
+            entity_info: None,
+            entity_map: EntityMap::new()
+        }
+    }
+
+    pub fn clear_entities(&mut self){
+        self.entity_map.clear();
+    }
+
+    pub fn update_entity_map(&mut self){
+        self.clear_entities();
+
+        match &self.status {
+            Some(status) => {
+                let mut cpt: u32 = 0;
+
+                for entity in status.room.entities.iter() {
+                    let guid = entity.clone();
+
+                    if guid != status.guid {
+                        self.entity_map.insert(cpt, guid);
+                        cpt += 1;
+                    }
+                }
+            },
+            None => ()
         }
     }
 
@@ -38,77 +68,83 @@ impl Session {
 
     pub fn update_room(&mut self, room: model::Room) {
         match &mut self.status {
-            Some(status) => status.room = room,
+            Some(status) => {
+                status.room = room;
+                self.update_entity_map();
+            },
             _ => (),
         }
     }
 
-    pub fn get_guid(&self) -> String {
+    pub fn get_guid(&self) -> Result<String, model::Error> {
         match &self.status {
-            Some(status) => status.guid.clone(),
-            _ => panic!("{}", ERROR_STATUS_UNINITALIZED),
+            Some(status) => Ok(status.guid.clone()),
+            _ => Err(model::Error {
+                code: None,
+                detail: model::ErrorDetail {
+                    r#type: None,
+                    message: ERROR_STATUS_UNINITALIZED.to_string()
+                }
+            })
         }
     }
 
     pub fn clean(&mut self) {
         self.error = None;
-        self.status_info.clear();
-        self.secondary_info.clear();
-    }
-
-    fn update_status_info(&mut self){
-        match &self.status {
-            Some(status) => {
-                self.status_info.push(format!("<life> {}", status.total_life));
-                self.status_info.push(format!("<room> {}", status.room.description));
-                self.status_info.push(format!("<paths> {}", status.get_paths_string()));
-                self.status_info.push(String::from("<entities>"));
-                for entity in status.room.entities.iter() {
-                    self.status_info.push(entity.clone());
-                }
-            },
-            None => ()
-        }
+        self.fight_info = None;
+        self.entity_info = None;
+        self.clear_entities();
     }
 
     pub fn connect(&mut self) {
         match self.client.connect() {
             Ok(status) => {
                 self.status = Some(status);
-                self.update_status_info();
+                self.update_entity_map();
             },
             Err(error) => self.error = Some(error),
         }
     }
 
     pub fn look_room(&mut self) {
-        match self.client.look_room(self.get_guid()) {
-            Ok(room) => {
-                self.update_room(room);
-                self.update_status_info();
+        match self.get_guid() {
+            Ok(guid) => match self.client.look_room(guid) {
+                Ok(room) => {
+                    self.update_room(room);
+                },
+                Err(error) => self.error = Some(error),
             },
-            Err(error) => self.error = Some(error),
+            Err(error) => self.error = Some(error)
         }
     }
 
     pub fn r#move(&mut self, direction: model::Direction) {
-        match self.client.r#move(self.get_guid(), direction) {
-            Ok(room) => self.update_room(room),
-            Err(error) => self.error = Some(error),
+        match self.get_guid() {
+            Ok(guid) => match self.client.r#move(guid, direction) {
+                Ok(room) => self.update_room(room),
+                Err(error) => self.error = Some(error),
+            }
+            Err(error) => self.error = Some(error)
         }
     }
 
     pub fn look_entity(&mut self, guid_dest: String) {
-        match self.client.look_entity(self.get_guid(), guid_dest) {
-            Ok(entity) => (),
-            Err(error) => self.error = Some(error),
+        match self.get_guid() {
+            Ok(guid) => match self.client.look_entity(guid, guid_dest) {
+                Ok(entity) => self.entity_info = Some(entity),
+                Err(error) => self.error = Some(error),
+            }
+            Err(error) => self.error = Some(error)
         }
     }
 
     pub fn attack(&mut self, guid_dest: String) {
-        match self.client.attack(self.get_guid(), guid_dest) {
-            Ok(fight) => (),
-            Err(error) => self.error = Some(error),
+        match self.get_guid() {
+            Ok(guid) => match self.client.attack(guid, guid_dest) {
+                Ok(fight) => self.fight_info = Some(fight),
+                Err(error) => self.error = Some(error),
+            }
+            Err(error) => self.error = Some(error)
         }
     }
 }

@@ -5,13 +5,13 @@ use console_engine::*;
 use textwrap::*;
 
 static PIXEL_BORDER_VERTICAL: pixel::Pixel = pixel::Pixel {
-    fg: Color::Reset,
+    fg: Color::Blue,
     bg: Color::Reset,
     chr: '｜',
 };
 
 static PIXEL_BORDER_HORIZONTAL: pixel::Pixel = pixel::Pixel {
-    fg: Color::Reset,
+    fg: Color::Blue,
     bg: Color::Reset,
     chr: '-',
 };
@@ -119,7 +119,7 @@ impl<'a> Runner {
     }
 
     fn will_quit(&self) -> bool {
-        self.ui_engine.is_key_pressed(KeyCode::Esc)
+        self.ui_engine.is_key_pressed(KeyCode::Char('q')) || self.ui_engine.is_key_pressed(KeyCode::Esc)
     }
 
     fn draw_screens(&mut self) {
@@ -199,9 +199,10 @@ impl<'a> Runner {
     fn fill_info_screen(&mut self) {}
 
     fn fill_keybinds_screen(&mut self) {
-        self.keybinds_screen.print(0, 0, "[c] > (re)connect");
-        self.keybinds_screen.print(0, 1, "[d] > disconnect");
-        self.keybinds_screen.print(0, 3, "[l] > look around");
+        self.keybinds_screen.print(0, 0, "[q] > quit");
+        self.keybinds_screen.print(0, 2, "[c] > (re)connect");
+        self.keybinds_screen.print(0, 3, "[d] > disconnect");
+        self.keybinds_screen.print(0, 5, "[l] > look around");
     }
 
     fn fill_status_screen(&mut self) {

@@ -37,27 +37,27 @@ impl MunHttpClient {
         match result {
             Ok(response) => match response.status().as_u16() {
                 400 => Err(model::Error {
-                    code: 400,
+                    code: Some(400),
                     detail: model::ErrorDetail {
                         r#type: None,
                         message: ERROR_400.to_string(),
                     },
                 }),
                 404 => Err(model::Error {
-                    code: 404,
+                    code: Some(404),
                     detail: model::ErrorDetail {
                         r#type: None,
                         message: ERROR_404.to_string(),
                     },
                 }),
                 409 => Err(model::Error {
-                    code: 409,
+                    code: Some(409),
                     detail: model::ErrorDetail::from_str(response.text().expect(ERROR_SERDE).as_str()),
                 }),
                 _ => Ok(T::from_str(response.text().expect(ERROR_SERDE).as_str())),
             },
             Err(_) => Err(model::Error {
-                code: 404,
+                code: Some(404),
                 detail: model::ErrorDetail {
                     r#type: None,
                     message: ERROR_REQWEST.to_string(),

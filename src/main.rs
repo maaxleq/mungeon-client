@@ -1,7 +1,6 @@
 mod model;
 mod net;
 mod session;
-mod runner;
 
 use std::env;
 
@@ -25,9 +24,10 @@ fn main() {
     if url == "" {
         panic!("{}", ERROR_NO_URL);
     }
-    else {
-        let mut runner: runner::Runner = runner::Runner::new(url);
-
-        runner.run();
-    }
+    
+    let mut session = session::Session::new(url);
+    session.connect();
+    session.look_room();
+    session.look_entity(String::from("33"));
+    println!("{:?}", session);
 }

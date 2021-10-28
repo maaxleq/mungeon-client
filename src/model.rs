@@ -20,7 +20,8 @@ pub enum Direction {
 
 impl Direction {
     pub fn to_movement_json(&self) -> String {
-        format!("{{ direction: \"{}\" }}",
+        format!(
+            "{{ direction: \"{}\" }}",
             match self {
                 Direction::N => "N",
                 Direction::E => "E",
@@ -46,7 +47,7 @@ impl MunModel for Direction {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EntityType {
     #[serde(rename = "MONSTRE")]
     Monster,
@@ -60,7 +61,7 @@ impl MunModel for EntityType {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ErrorType {
     #[serde(rename = "MORT")]
     Dead,
@@ -126,7 +127,7 @@ impl Status {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Entity {
     pub description: String,
     pub r#type: EntityType,
@@ -142,7 +143,7 @@ impl MunModel for Entity {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Fighter {
     pub guid: String,
     #[serde(rename = "degats")]
@@ -157,7 +158,7 @@ impl MunModel for Fighter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Fight {
     #[serde(rename = "attaquant")]
     pub attacker: Fighter,
@@ -171,7 +172,7 @@ impl MunModel for Fight {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ErrorDetail {
     pub r#type: Option<ErrorType>,
     pub message: String,
@@ -183,7 +184,7 @@ impl MunModel for ErrorDetail {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Error {
     pub code: Option<u16>,
     pub detail: ErrorDetail,

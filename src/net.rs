@@ -11,7 +11,7 @@ pub enum MunRequest {
     Post(String, String),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MunHttpClient {
     pub base_url: String,
     http_client: reqwest::blocking::Client,
@@ -52,7 +52,9 @@ impl MunHttpClient {
                 }),
                 409 => Err(model::Error {
                     code: Some(409),
-                    detail: model::ErrorDetail::from_str(response.text().expect(ERROR_SERDE).as_str()),
+                    detail: model::ErrorDetail::from_str(
+                        response.text().expect(ERROR_SERDE).as_str(),
+                    ),
                 }),
                 _ => Ok(T::from_str(response.text().expect(ERROR_SERDE).as_str())),
             },
@@ -76,18 +78,32 @@ impl MunHttpClient {
         self.send_request::<model::Room>(request)
     }
 
-    pub fn r#move(&self, guid: String, direction: model::Direction) -> Result<model::Room, model::Error> {
-        let request = MunRequest::Post(format!("{}/{}/deplacement", self.base_url, guid), direction.to_movement_json());
+    pub fn r#move(
+        &self,
+        guid: String,
+        direction: model::Direction,
+    ) -> Result<model::Room, model::Error> {
+        let request = MunRequest::Post(
+            format!("{}/{}/deplacement", self.base_url, guid),
+            direction.to_movement_json(),
+        );
         self.send_request::<model::Room>(request)
     }
 
-    pub fn look_entity(&self, guid: String, guid_dest: String) -> Result<model::Entity, model::Error> {
+    pub fn look_entity(
+        &self,
+        guid: String,
+        guid_dest: String,
+    ) -> Result<model::Entity, model::Error> {
         let request = MunRequest::Get(format!("{}/{}/examiner/{}", self.base_url, guid, guid_dest));
         self.send_request::<model::Entity>(request)
     }
 
     pub fn attack(&self, guid: String, guid_dest: String) -> Result<model::Fight, model::Error> {
-        let request = MunRequest::Post(format!("{}/{}/taper/{}", self.base_url, guid, guid_dest), String::new());
+        let request = MunRequest::Post(
+            format!("{}/{}/taper/{}", self.base_url, guid, guid_dest),
+            String::new(),
+        );
         self.send_request::<model::Fight>(request)
     }
 }

@@ -8,14 +8,14 @@ static ERROR_STATUS_UNINITALIZED: &'static str =
 
 pub type EntityMap = HashMap<u32, String>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Session {
     pub status: Option<model::Status>,
     pub client: net::MunHttpClient,
     pub error: Option<model::Error>,
     pub fight_info: Option<model::Fight>,
-    pub entity_info: Option<model::Entity>, 
-    pub entity_map: EntityMap
+    pub entity_info: Option<model::Entity>,
+    pub entity_map: EntityMap,
 }
 
 impl Session {
@@ -26,20 +26,20 @@ impl Session {
             error: None,
             fight_info: None,
             entity_info: None,
-            entity_map: EntityMap::new()
+            entity_map: EntityMap::new(),
         }
     }
 
-    pub fn clear_entities(&mut self){
+    pub fn clear_entities(&mut self) {
         self.entity_map.clear();
     }
 
-    pub fn update_entity_map(&mut self){
+    pub fn update_entity_map(&mut self) {
         self.clear_entities();
 
         match &self.status {
             Some(status) => {
-                let mut cpt: u32 = 0;
+                let mut cpt: u32 = 1;
 
                 for entity in status.room.entities.iter() {
                     let guid = entity.clone();
@@ -49,14 +49,34 @@ impl Session {
                         cpt += 1;
                     }
                 }
-            },
-            None => ()
+            }
+            None => (),
         }
+    }
+
+    pub fn get_entity_guid(&mut self, target_key: u32) -> Option<String> {
+        for (key, val) in self.entity_map.iter() {
+            if key == &target_key {
+                return Some(val.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn get_entities_keys(&self) -> Vec<u32> {
+        let mut keys: Vec<u32> = Vec::new();
+
+        for key in self.entity_map.keys() {
+            keys.push(key.clone());
+        }
+
+        keys
     }
 
     pub fn disconnect(&mut self) {
         self.status = None;
-        self.clean();
+        self.clear();
     }
 
     pub fn is_connected(&self) -> bool {
@@ -71,7 +91,7 @@ impl Session {
             Some(status) => {
                 status.room = room;
                 self.update_entity_map();
-            },
+            }
             _ => (),
         }
     }
@@ -83,17 +103,23 @@ impl Session {
                 code: None,
                 detail: model::ErrorDetail {
                     r#type: None,
-                    message: ERROR_STATUS_UNINITALIZED.to_string()
-                }
-            })
+                    message: ERROR_STATUS_UNINITALIZED.to_string(),
+                },
+            }),
         }
     }
 
-    pub fn clean(&mut self) {
+    pub fn clear_info(&mut self) {
         self.error = None;
         self.fight_info = None;
         self.entity_info = None;
+    }
+
+    fn clear(&mut self) {
+        self.status = None;
+
         self.clear_entities();
+        self.clear_info();
     }
 
     pub fn connect(&mut self) {
@@ -101,7 +127,7 @@ impl Session {
             Ok(status) => {
                 self.status = Some(status);
                 self.update_entity_map();
-            },
+            }
             Err(error) => self.error = Some(error),
         }
     }
@@ -111,10 +137,10 @@ impl Session {
             Ok(guid) => match self.client.look_room(guid) {
                 Ok(room) => {
                     self.update_room(room);
-                },
+                }
                 Err(error) => self.error = Some(error),
             },
-            Err(error) => self.error = Some(error)
+            Err(error) => self.error = Some(error),
         }
     }
 
@@ -123,8 +149,8 @@ impl Session {
             Ok(guid) => match self.client.r#move(guid, direction) {
                 Ok(room) => self.update_room(room),
                 Err(error) => self.error = Some(error),
-            }
-            Err(error) => self.error = Some(error)
+            },
+            Err(error) => self.error = Some(error),
         }
     }
 
@@ -133,8 +159,8 @@ impl Session {
             Ok(guid) => match self.client.look_entity(guid, guid_dest) {
                 Ok(entity) => self.entity_info = Some(entity),
                 Err(error) => self.error = Some(error),
-            }
-            Err(error) => self.error = Some(error)
+            },
+            Err(error) => self.error = Some(error),
         }
     }
 
@@ -143,8 +169,8 @@ impl Session {
             Ok(guid) => match self.client.attack(guid, guid_dest) {
                 Ok(fight) => self.fight_info = Some(fight),
                 Err(error) => self.error = Some(error),
-            }
-            Err(error) => self.error = Some(error)
+            },
+            Err(error) => self.error = Some(error),
         }
     }
 }

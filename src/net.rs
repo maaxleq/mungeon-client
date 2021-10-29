@@ -2,8 +2,8 @@ use crate::model;
 use crate::model::MunModel;
 
 static ERROR_REQWEST: &'static str = "A Reqwest error has occured";
-static ERROR_400: &'static str = "Error 404: URL not found";
-static ERROR_404: &'static str = "Error 400: Bad request";
+static ERROR_400: &'static str = "Bad request";
+static ERROR_404: &'static str = "URL not found";
 static ERROR_SERDE: &'static str = "Error while parsing JSON response";
 
 pub enum MunRequest {
@@ -31,7 +31,12 @@ impl MunHttpClient {
     {
         let result = match request {
             MunRequest::Get(url) => self.http_client.get(url).send(),
-            MunRequest::Post(url, body) => self.http_client.post(url).body(body).send(),
+            MunRequest::Post(url, body) => self
+                .http_client
+                .post(url)
+                .body(body)
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .send(),
         };
 
         match result {
@@ -50,13 +55,17 @@ impl MunHttpClient {
                         message: ERROR_404.to_string(),
                     },
                 }),
-                409 => Err(model::Error {
-                    code: Some(409),
-                    detail: model::ErrorDetail::from_str(
-                        response.text().expect(ERROR_SERDE).as_str(),
-                    ),
+                409 => Err(match response.text() {
+                    Ok(text) => model::Error {
+                        code: Some(409),
+                        detail: model::ErrorDetail::from_str(text.as_str())?
+                    },
+                    Err(_) => Err(model::Error::from_error_string(ERROR_SERDE.to_string()))?
                 }),
-                _ => Ok(T::from_str(response.text().expect(ERROR_SERDE).as_str())),
+                _ => match response.text() {
+                    Ok(text) => T::from_str(text.as_str()),
+                    Err(_) => Err(model::Error::from_error_string(ERROR_SERDE.to_string())),
+                },
             },
             Err(_) => Err(model::Error {
                 code: Some(404),

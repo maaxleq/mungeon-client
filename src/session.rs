@@ -109,7 +109,7 @@ impl Session {
         }
     }
 
-    pub fn clear_info(&mut self) {
+    pub fn clear_infos(&mut self) {
         self.error = None;
         self.fight_info = None;
         self.entity_info = None;
@@ -119,7 +119,7 @@ impl Session {
         self.status = None;
 
         self.clear_entities();
-        self.clear_info();
+        self.clear_infos();
     }
 
     pub fn connect(&mut self) {

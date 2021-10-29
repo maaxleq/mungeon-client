@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+static ERROR_DESERIALIZATION: &'static str = "Error while deserializing object";
+
 pub trait MunModel {
-    fn from_str(data: &str) -> Self
+    fn from_str(data: &str) -> Result<Self, Error>
     where
         Self: Sized;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub enum Direction {
     #[serde(rename = "N")]
     N,
@@ -21,7 +23,7 @@ pub enum Direction {
 impl Direction {
     pub fn to_movement_json(&self) -> String {
         format!(
-            "{{ direction: \"{}\" }}",
+            "{{ \"direction\": \"{}\" }}",
             match self {
                 Direction::N => "N",
                 Direction::E => "E",
@@ -32,15 +34,12 @@ impl Direction {
     }
 }
 
-impl PartialEq for Direction {
-    fn eq(&self, other: &Direction) -> bool {
-        matches!(self, other)
-    }
-}
-
 impl MunModel for Direction {
-    fn from_str(data: &str) -> Direction {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Direction, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -53,8 +52,11 @@ pub enum EntityType {
 }
 
 impl MunModel for EntityType {
-    fn from_str(data: &str) -> EntityType {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<EntityType, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -69,8 +71,21 @@ pub enum ErrorType {
 }
 
 impl MunModel for ErrorType {
-    fn from_str(data: &str) -> ErrorType {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<ErrorType, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
+    }
+}
+
+impl ErrorType {
+    pub fn to_string(&self) -> String {
+        match self {
+            ErrorType::Dead => String::from("Death"),
+            ErrorType::Wall => String::from("Wall"),
+            ErrorType::DiffRoom => String::from("Different room"),
+        }
     }
 }
 
@@ -84,8 +99,11 @@ pub struct Room {
 }
 
 impl MunModel for Room {
-    fn from_str(data: &str) -> Room {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Room, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -99,8 +117,11 @@ pub struct Status {
 }
 
 impl MunModel for Status {
-    fn from_str(data: &str) -> Status {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Status, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -115,8 +136,11 @@ pub struct Entity {
 }
 
 impl MunModel for Entity {
-    fn from_str(data: &str) -> Entity {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Entity, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -130,8 +154,11 @@ pub struct Fighter {
 }
 
 impl MunModel for Fighter {
-    fn from_str(data: &str) -> Fighter {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Fighter, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -144,8 +171,11 @@ pub struct Fight {
 }
 
 impl MunModel for Fight {
-    fn from_str(data: &str) -> Fight {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<Fight, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -156,8 +186,11 @@ pub struct ErrorDetail {
 }
 
 impl MunModel for ErrorDetail {
-    fn from_str(data: &str) -> ErrorDetail {
-        serde_json::from_str(data).unwrap()
+    fn from_str(data: &str) -> Result<ErrorDetail, Error> {
+        match serde_json::from_str(data) {
+            Ok(object) => Ok(object),
+            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        }
     }
 }
 
@@ -165,4 +198,16 @@ impl MunModel for ErrorDetail {
 pub struct Error {
     pub code: Option<u16>,
     pub detail: ErrorDetail,
+}
+
+impl Error {
+    pub fn from_error_string(error_string: String) -> Error {
+        Error {
+            code: None,
+            detail: ErrorDetail {
+                r#type: None,
+                message: error_string,
+            },
+        }
+    }
 }

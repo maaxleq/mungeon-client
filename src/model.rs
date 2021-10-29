@@ -30,14 +30,11 @@ impl Direction {
             }
         )
     }
+}
 
-    pub fn to_string(&self) -> String {
-        match self {
-            Direction::N => String::from("N"),
-            Direction::E => String::from("E"),
-            Direction::S => String::from("S"),
-            Direction::W => String::from("W"),
-        }
+impl PartialEq for Direction {
+    fn eq(&self, other: &Direction) -> bool {
+        matches!(self, other)
     }
 }
 
@@ -104,26 +101,6 @@ pub struct Status {
 impl MunModel for Status {
     fn from_str(data: &str) -> Status {
         serde_json::from_str(data).unwrap()
-    }
-}
-
-impl Status {
-    pub fn get_paths_string(&self) -> String {
-        let paths = &self.room.paths;
-
-        match paths.len() {
-            0 => String::from("None"),
-            _ => {
-                let mut s = String::new();
-                s += &paths[0].to_string();
-
-                for path in paths.iter().skip(1) {
-                    s += &format!(", {}", path.to_string());
-                }
-
-                s
-            }
-        }
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::model;
 use crate::session;
 
 use crossterm::event;
@@ -33,6 +34,20 @@ static STYLE_RED: style::Style = style::Style {
 static STYLE_TITLE: style::Style = style::Style {
     fg: Some(style::Color::White),
     bg: Some(style::Color::Blue),
+    add_modifier: style::Modifier::empty(),
+    sub_modifier: style::Modifier::empty(),
+};
+
+static STYLE_DUNGEON: style::Style = style::Style {
+    fg: Some(style::Color::White),
+    bg: Some(style::Color::Blue),
+    add_modifier: style::Modifier::empty(),
+    sub_modifier: style::Modifier::empty(),
+};
+
+static STYLE_RESET: style::Style = style::Style {
+    fg: Some(style::Color::Reset),
+    bg: Some(style::Color::Reset),
     add_modifier: style::Modifier::empty(),
     sub_modifier: style::Modifier::empty(),
 };
@@ -156,6 +171,11 @@ impl Runner {
 
             let dungeon_block = widgets::Block::default()
                 .title("Dungeon")
+                .style(if matches!(session.status.clone(), Some(_)) {
+                    STYLE_DUNGEON
+                } else {
+                    STYLE_RESET
+                })
                 .borders(widgets::Borders::ALL);
 
             let net_paragraph = widgets::Paragraph::new(vec![
@@ -169,7 +189,7 @@ impl Runner {
             .block(net_block)
             .wrap(widgets::Wrap { trim: false });
 
-            let status_spans = match session.status {
+            let status_spans = match session.status.clone() {
                 Some(status) => {
                     let temp_vec = vec![
                         text::Spans::from(vec![
@@ -200,9 +220,48 @@ impl Runner {
                 .block(status_block)
                 .wrap(widgets::Wrap { trim: false });
 
+            let dungeon_canvas = widgets::canvas::Canvas::default()
+                .block(dungeon_block)
+                .background_color(STYLE_DUNGEON.bg.unwrap())
+                .paint(|ctx| {
+                    if matches!(session.status.clone(), Some(_)) {
+                        ctx.draw(&widgets::canvas::Rectangle {
+                            x: 0.0,
+                            y: 0.0,
+                            width: 100.0,
+                            height: 100.0,
+                            color: STYLE_DUNGEON.fg.unwrap(),
+                        });
+                        ctx.layer();
+                        match session.status.clone() {
+                            Some(status) => {
+                                for direction in status.room.paths.clone().iter() {
+                                    match direction {
+                                        model::Direction::N => {
+                                            ctx.print(50.0, 100.0, "N", STYLE_DUNGEON.fg.unwrap())
+                                        }
+                                        model::Direction::S => {
+                                            ctx.print(50.0, 0.0, "S", STYLE_DUNGEON.fg.unwrap())
+                                        }
+                                        model::Direction::W => {
+                                            ctx.print(0.0, 50.0, "W", STYLE_DUNGEON.fg.unwrap())
+                                        }
+                                        model::Direction::E => {
+                                            ctx.print(100.0, 50.0, "E", STYLE_DUNGEON.fg.unwrap())
+                                        }
+                                    }
+                                }
+                            }
+                            None => (),
+                        };
+                    }
+                })
+                .x_bounds([00.0, 100.0])
+                .y_bounds([00.0, 100.0]);
+
             f.render_widget(net_paragraph, left_chunks[0]);
             f.render_widget(status_paragraph, left_chunks[1]);
-            f.render_widget(dungeon_block, x_chunks[1]);
+            f.render_widget(dungeon_canvas, x_chunks[1]);
         })?;
 
         Ok(())

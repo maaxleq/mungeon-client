@@ -1,7 +1,7 @@
 use crate::model;
 use crate::model::MunModel;
 
-static ERROR_REQWEST: &'static str = "A Reqwest error has occured";
+static ERROR_NETWORK: &'static str = "A network error has occured";
 static ERROR_400: &'static str = "Bad request";
 static ERROR_404: &'static str = "URL not found";
 static ERROR_SERDE: &'static str = "Error while parsing JSON response";
@@ -68,10 +68,10 @@ impl MunHttpClient {
                 },
             },
             Err(_) => Err(model::Error {
-                code: Some(404),
+                code: None,
                 detail: model::ErrorDetail {
                     r#type: None,
-                    message: ERROR_REQWEST.to_string(),
+                    message: ERROR_NETWORK.to_string(),
                 },
             }),
         }

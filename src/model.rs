@@ -60,6 +60,15 @@ impl MunModel for EntityType {
     }
 }
 
+impl EntityType {
+    pub fn to_string(&self) -> String {
+        match self {
+            EntityType::Monster => String::from("Monster"),
+            EntityType::Player => String::from("Player"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ErrorType {
     #[serde(rename = "MORT")]

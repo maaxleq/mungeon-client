@@ -58,11 +58,60 @@ enum ChannelEvent<I> {
 }
 
 #[derive(Clone)]
+struct EntitiesList {
+    pub state: widgets::ListState,
+    pub entities: Vec<u32>,
+}
+
+impl EntitiesList {
+    pub fn new() -> EntitiesList {
+        EntitiesList {
+            state: widgets::ListState::default(),
+            entities: Vec::new(),
+        }
+    }
+
+    pub fn try_select_next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.entities.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn try_select_previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.entities.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn get_selected_entity(&self) -> Option<u32> {
+        Some(self.entities[self.state.selected()?])
+    }
+}
+
+#[derive(Clone)]
 struct PopupManager {
     pub popup_mode: bool,
     pub title: String,
     pub infos: Vec<String>,
-    pub list: widgets::ListState
+    pub will_look: bool,
+    pub will_attack: bool,
+    pub entities_list: EntitiesList,
 }
 
 impl PopupManager {
@@ -71,13 +120,15 @@ impl PopupManager {
             popup_mode: false,
             infos: Vec::new(),
             title: String::new(),
-            list: widgets::ListState::default(),
+            will_look: false,
+            will_attack: false,
+            entities_list: EntitiesList::new(),
         }
     }
 }
 
 pub struct Runner {
-    pub terminal: Terminal<backend::CrosstermBackend<std::io::Stdout>>,
+    terminal: Terminal<backend::CrosstermBackend<std::io::Stdout>>,
     session: session::Session,
     receiver: mpsc::Receiver<ChannelEvent<event::KeyEvent>>,
     popup_manager: PopupManager,
@@ -107,6 +158,10 @@ impl Runner {
         })
     }
 
+    fn fill_entities_list(&mut self) {
+        self.popup_manager.entities_list.entities = self.session.get_entities_keys();
+    }
+
     fn spawn_sender_thread(sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>, tick_rate: u64) {
         let tick_rate = time::Duration::from_millis(tick_rate);
 
@@ -130,9 +185,37 @@ impl Runner {
         });
     }
 
+    fn display_misc_info(&mut self){
+        match &self.session.fight_info {
+            Some(fight) => {
+                self.popup_manager.popup_mode = true;
+                self.popup_manager.title = String::from("Fight result");
+                let infos_vec = vec![
+                    format!("You inflicted {} DP and have {} HP left", fight.attacker.damage, fight.attacker.life),
+                    format!("Your enemy inflicted {} DP and has {} HP left", fight.defender.damage, fight.defender.life),
+                ];
+                self.popup_manager.infos = infos_vec;
+            },
+            None => ()
+        };
+        match &self.session.entity_info {
+            Some(entity) => {
+                self.popup_manager.popup_mode = true;
+                self.popup_manager.title = String::from("Entity info");
+                let infos_vec = vec![
+                    entity.description.clone(),
+                    entity.r#type.to_string(),
+                    format!("{}/{} HP", &entity.life, &entity.total_life)
+                ];
+                self.popup_manager.infos = infos_vec;
+            },
+            None => ()
+        };
+    }
+
     fn draw(&mut self) -> Result<(), io::Error> {
         let session = self.session.clone();
-        let popup_manager = self.popup_manager.clone();
+        let mut popup_manager = self.popup_manager.clone();
 
         self.terminal.draw(|f| {
             let size = f.size();
@@ -270,19 +353,42 @@ impl Runner {
             f.render_widget(dungeon_canvas, x_chunks[1]);
 
             if popup_manager.popup_mode {
-                let mut popup_spans: Vec<text::Spans> = Vec::new();
-                for info in popup_manager.infos.clone().iter() {
-                    popup_spans.push(text::Spans::from(info.clone()));
+                if popup_manager.will_attack || popup_manager.will_look {
+                    let popup_block = widgets::Block::default()
+                        .title(popup_manager.title.clone())
+                        .borders(widgets::Borders::ALL);
+                    let area = Runner::centered_rect(60, 60, size);
+                    let entities: Vec<widgets::ListItem> = popup_manager
+                        .entities_list
+                        .entities
+                        .iter()
+                        .map(|i| {
+                            widgets::ListItem::new(vec![text::Spans::from(text::Span::raw(
+                                format!("{}", i),
+                            ))])
+                        })
+                        .collect();
+                    let popup_list = widgets::List::new(entities)
+                        .block(popup_block)
+                        .highlight_style(style::Style::default().add_modifier(style::Modifier::BOLD))
+                        .highlight_symbol("> ");
+                    f.render_widget(widgets::Clear, area);
+                    f.render_stateful_widget(popup_list, area, &mut popup_manager.entities_list.state);
+                } else {
+                    let mut popup_spans: Vec<text::Spans> = Vec::new();
+                    for info in popup_manager.infos.clone().iter() {
+                        popup_spans.push(text::Spans::from(info.clone()));
+                    }
+                    let popup_block = widgets::Block::default()
+                        .title(popup_manager.title.clone())
+                        .borders(widgets::Borders::ALL);
+                    let popup_paragraph = widgets::Paragraph::new(popup_spans)
+                        .block(popup_block)
+                        .wrap(widgets::Wrap { trim: false });
+                    let area = Runner::centered_rect(60, 60, size);
+                    f.render_widget(widgets::Clear, area);
+                    f.render_widget(popup_paragraph, area);
                 }
-                let popup_block = widgets::Block::default()
-                    .title(popup_manager.title.clone())
-                    .borders(widgets::Borders::ALL);
-                let popup_paragraph = widgets::Paragraph::new(popup_spans)
-                    .block(popup_block)
-                    .wrap(widgets::Wrap { trim: false });
-                let area = Runner::centered_rect(60, 60, size);
-                f.render_widget(widgets::Clear, area);
-                f.render_widget(popup_paragraph, area);
             }
         })?;
 
@@ -311,23 +417,25 @@ impl Runner {
         }
     }
 
-    fn display_keybinds(&mut self){
+    fn display_keybinds(&mut self) {
         self.popup_manager.popup_mode = true;
         self.popup_manager.title = String::from("Keybinds");
         self.popup_manager.infos = vec![
-            String::from("[c]       (re)connect"),
-            String::from("[d]       disconnect"),
-            String::from("[l]       look around"),
-            String::from("[e]       look entity"),
-            String::from("[a]       attack"),
-            String::from("[arrows]  move"),
-            String::from("[q]       quit"),
+            String::from("[c]        (re)connect"),
+            String::from("[d]        disconnect"),
+            String::from("[l]        look around"),
+            String::from("[e]        look entity"),
+            String::from("[a]        attack"),
+            String::from("[arrows]   move"),
+            String::from("[q]        quit"),
         ];
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn error::Error>> {
         loop {
+            self.display_misc_info();
             self.handle_errors();
+            self.fill_entities_list();
 
             self.draw()?;
 
@@ -386,7 +494,40 @@ impl Runner {
             true => match e {
                 event::KeyCode::Enter => {
                     self.popup_manager.popup_mode = false;
-                    self.session.clear_infos();
+                    if self.popup_manager.will_attack {
+                        match self.popup_manager.entities_list.get_selected_entity() {
+                            Some(id) => match self.session.get_entity_guid(id) {
+                                Some(guid) => self.session.attack(guid),
+                                None => (),
+                            },
+                            None => (),
+                        }
+                    }
+                    else if self.popup_manager.will_look {
+                        match self.popup_manager.entities_list.get_selected_entity() {
+                            Some(id) => match self.session.get_entity_guid(id) {
+                                Some(guid) => self.session.look_entity(guid),
+                                None => (),
+                            },
+                            None => (),
+                        }
+                    }
+                    else {
+                        self.session.clear_infos();
+                    }
+                    self.popup_manager.will_look = false;
+                    self.popup_manager.will_attack = false;
+                    self.popup_manager.entities_list.state.select(None);
+                }
+                event::KeyCode::Up => {
+                    if self.popup_manager.will_attack || self.popup_manager.will_look {
+                        self.popup_manager.entities_list.try_select_previous();
+                    }
+                }
+                event::KeyCode::Down => {
+                    if self.popup_manager.will_attack || self.popup_manager.will_look {
+                        self.popup_manager.entities_list.try_select_next();
+                    }
                 }
                 _ => (),
             },
@@ -396,6 +537,16 @@ impl Runner {
                     'd' => self.session.disconnect(),
                     'l' => self.session.look_room(),
                     'h' => self.display_keybinds(),
+                    'a' => {
+                        self.popup_manager.popup_mode = true;
+                        self.popup_manager.title = String::from("Attack who");
+                        self.popup_manager.will_attack = true;
+                    }
+                    'e' => {
+                        self.popup_manager.popup_mode = true;
+                        self.popup_manager.title = String::from("Look who");
+                        self.popup_manager.will_look = true;
+                    }
                     _ => (),
                 },
                 event::KeyCode::Up => self.session.r#move(model::Direction::N),

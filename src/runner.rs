@@ -55,7 +55,7 @@ static STYLE_RESET: style::Style = style::Style {
 enum ChannelEvent<I> {
     Input(I),
     Tick,
-    AutoUpdate
+    AutoUpdate,
 }
 
 #[derive(Clone)]
@@ -192,18 +192,24 @@ impl Runner {
         });
     }
 
-    fn display_misc_info(&mut self){
+    fn display_misc_info(&mut self) {
         match &self.session.fight_info {
             Some(fight) => {
                 self.popup_manager.popup_mode = true;
                 self.popup_manager.title = String::from("Fight result");
                 let infos_vec = vec![
-                    format!("You inflicted {} DP and have {} HP left", fight.attacker.damage, fight.attacker.life),
-                    format!("Your enemy inflicted {} DP and has {} HP left", fight.defender.damage, fight.defender.life),
+                    format!(
+                        "You inflicted {} DP and have {} HP left",
+                        fight.attacker.damage, fight.attacker.life
+                    ),
+                    format!(
+                        "Your enemy inflicted {} DP and has {} HP left",
+                        fight.defender.damage, fight.defender.life
+                    ),
                 ];
                 self.popup_manager.infos = infos_vec;
-            },
-            None => ()
+            }
+            None => (),
         };
         match &self.session.entity_info {
             Some(entity) => {
@@ -212,11 +218,11 @@ impl Runner {
                 let infos_vec = vec![
                     entity.description.clone(),
                     entity.r#type.to_string(),
-                    format!("{}/{} HP", &entity.life, &entity.total_life)
+                    format!("{}/{} HP", &entity.life, &entity.total_life),
                 ];
                 self.popup_manager.infos = infos_vec;
-            },
-            None => ()
+            }
+            None => (),
         };
     }
 
@@ -283,7 +289,11 @@ impl Runner {
                         text::Spans::from(vec![
                             text::Span::styled("HP", STYLE_TITLE),
                             text::Span::raw(String::from(" ")),
-                            text::Span::raw(format!("{}/{}", status.life.clone().unwrap_or(0).to_string(), status.total_life.clone().to_string())),
+                            text::Span::raw(format!(
+                                "{}/{}",
+                                status.life.clone().unwrap_or(0).to_string(),
+                                status.total_life.clone().to_string()
+                            )),
                         ]),
                         text::Spans::from(text::Span::raw(String::from("\n"))),
                         text::Spans::from(vec![
@@ -377,10 +387,16 @@ impl Runner {
                         .collect();
                     let popup_list = widgets::List::new(entities)
                         .block(popup_block)
-                        .highlight_style(style::Style::default().add_modifier(style::Modifier::BOLD))
+                        .highlight_style(
+                            style::Style::default().add_modifier(style::Modifier::BOLD),
+                        )
                         .highlight_symbol("> ");
                     f.render_widget(widgets::Clear, area);
-                    f.render_stateful_widget(popup_list, area, &mut popup_manager.entities_list.state);
+                    f.render_stateful_widget(
+                        popup_list,
+                        area,
+                        &mut popup_manager.entities_list.state,
+                    );
                 } else {
                     let mut popup_spans: Vec<text::Spans> = Vec::new();
                     for info in popup_manager.infos.clone().iter() {
@@ -455,7 +471,7 @@ impl Runner {
                     e => self.handle_input(e),
                 },
                 ChannelEvent::AutoUpdate => {
-                    if self.session.is_connected(){
+                    if self.session.is_connected() {
                         self.session.update();
                     }
                 }
@@ -512,25 +528,23 @@ impl Runner {
                                 Some(guid) => {
                                     self.session.attack(guid);
                                     self.session.update();
-                                },
+                                }
                                 None => (),
                             },
                             None => (),
                         }
-                    }
-                    else if self.popup_manager.will_look {
+                    } else if self.popup_manager.will_look {
                         match self.popup_manager.entities_list.get_selected_entity() {
                             Some(id) => match self.session.get_entity_guid(id) {
                                 Some(guid) => {
                                     self.session.look_entity(guid);
                                     self.session.update();
-                                },
+                                }
                                 None => (),
                             },
                             None => (),
                         }
-                    }
-                    else {
+                    } else {
                         self.session.clear_infos();
                     }
                     self.popup_manager.will_look = false;
@@ -570,19 +584,19 @@ impl Runner {
                 event::KeyCode::Up => {
                     self.session.r#move(model::Direction::N);
                     self.session.update();
-                },
+                }
                 event::KeyCode::Down => {
                     self.session.r#move(model::Direction::S);
                     self.session.update();
-                },
+                }
                 event::KeyCode::Right => {
                     self.session.r#move(model::Direction::E);
                     self.session.update();
-                },
+                }
                 event::KeyCode::Left => {
                     self.session.r#move(model::Direction::W);
                     self.session.update();
-                },
+                }
                 _ => (),
             },
         }

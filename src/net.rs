@@ -58,9 +58,9 @@ impl MunHttpClient {
                 409 => Err(match response.text() {
                     Ok(text) => model::Error {
                         code: Some(409),
-                        detail: model::ErrorDetail::from_str(text.as_str())?
+                        detail: model::ErrorDetail::from_str(text.as_str())?,
                     },
-                    Err(_) => Err(model::Error::from_error_string(ERROR_SERDE.to_string()))?
+                    Err(_) => Err(model::Error::from_error_string(ERROR_SERDE.to_string()))?,
                 }),
                 _ => match response.text() {
                     Ok(text) => T::from_str(text.as_str()),

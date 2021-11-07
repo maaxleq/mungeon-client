@@ -1,7 +1,7 @@
 mod model;
 mod net;
-mod session;
 mod runner;
+mod session;
 
 use std::env;
 use std::error;

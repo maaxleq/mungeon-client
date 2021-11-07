@@ -172,7 +172,7 @@ impl Session {
                         status.life = Some(entity.life);
                         status.total_life = entity.total_life;
                     }
-                    None => ()
+                    None => (),
                 },
                 Err(error) => self.error = Some(error),
             },
@@ -180,7 +180,7 @@ impl Session {
         }
     }
 
-    pub fn update(&mut self){
+    pub fn update(&mut self) {
         self.look_room();
         self.look_self();
     }

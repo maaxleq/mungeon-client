@@ -38,7 +38,7 @@ impl MunModel for Direction {
     fn from_str(data: &str) -> Result<Direction, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -55,7 +55,7 @@ impl MunModel for EntityType {
     fn from_str(data: &str) -> Result<EntityType, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -83,7 +83,7 @@ impl MunModel for ErrorType {
     fn from_str(data: &str) -> Result<ErrorType, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -111,7 +111,7 @@ impl MunModel for Room {
     fn from_str(data: &str) -> Result<Room, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -121,15 +121,21 @@ pub struct Status {
     pub guid: String,
     #[serde(rename = "totalvie")]
     pub total_life: u32,
+    pub life: Option<u32>,
     #[serde(rename = "salle")]
     pub room: Room,
 }
 
 impl MunModel for Status {
     fn from_str(data: &str) -> Result<Status, Error> {
-        match serde_json::from_str(data) {
-            Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+        match serde_json::from_str::<Status>(data) {
+            Ok(object) => Ok(Status {
+                guid: object.guid,
+                total_life: object.total_life,
+                life: Some(object.total_life),
+                room: object.room
+            }),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -148,7 +154,7 @@ impl MunModel for Entity {
     fn from_str(data: &str) -> Result<Entity, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -166,7 +172,7 @@ impl MunModel for Fighter {
     fn from_str(data: &str) -> Result<Fighter, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -183,7 +189,7 @@ impl MunModel for Fight {
     fn from_str(data: &str) -> Result<Fight, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }
@@ -198,7 +204,7 @@ impl MunModel for ErrorDetail {
     fn from_str(data: &str) -> Result<ErrorDetail, Error> {
         match serde_json::from_str(data) {
             Ok(object) => Ok(object),
-            Err(_) => Err(Error::from_error_string(ERROR_DESERIALIZATION.to_string())),
+            Err(_) => Err(Error::from_error_string(format!("{}: got \"{}\"", ERROR_DESERIALIZATION.to_string(), data.to_string()))),
         }
     }
 }

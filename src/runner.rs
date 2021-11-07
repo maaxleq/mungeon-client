@@ -55,6 +55,7 @@ static STYLE_RESET: style::Style = style::Style {
 enum ChannelEvent<I> {
     Input(I),
     Tick,
+    AutoUpdate
 }
 
 #[derive(Clone)]
@@ -164,9 +165,11 @@ impl Runner {
 
     fn spawn_sender_thread(sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>, tick_rate: u64) {
         let tick_rate = time::Duration::from_millis(tick_rate);
+        let update_rate = time::Duration::from_secs(1);
 
         thread::spawn(move || {
             let mut last_tick = time::Instant::now();
+            let mut update_tick = time::Instant::now();
 
             loop {
                 let timeout = tick_rate
@@ -180,6 +183,10 @@ impl Runner {
                 if last_tick.elapsed() >= tick_rate {
                     sender.send(ChannelEvent::Tick).unwrap();
                     last_tick = time::Instant::now();
+                }
+                if update_tick.elapsed() >= update_rate {
+                    sender.send(ChannelEvent::AutoUpdate).unwrap();
+                    update_tick = time::Instant::now();
                 }
             }
         });
@@ -274,9 +281,9 @@ impl Runner {
                 Some(status) => {
                     let temp_vec = vec![
                         text::Spans::from(vec![
-                            text::Span::styled("LIFE", STYLE_TITLE),
+                            text::Span::styled("HP", STYLE_TITLE),
                             text::Span::raw(String::from(" ")),
-                            text::Span::raw(status.total_life.clone().to_string()),
+                            text::Span::raw(format!("{}/{}", status.life.clone().unwrap_or(0).to_string(), status.total_life.clone().to_string())),
                         ]),
                         text::Spans::from(text::Span::raw(String::from("\n"))),
                         text::Spans::from(vec![
@@ -447,6 +454,11 @@ impl Runner {
                     }
                     e => self.handle_input(e),
                 },
+                ChannelEvent::AutoUpdate => {
+                    if self.session.is_connected(){
+                        self.session.update();
+                    }
+                }
                 _ => (),
             }
         }
@@ -497,7 +509,10 @@ impl Runner {
                     if self.popup_manager.will_attack {
                         match self.popup_manager.entities_list.get_selected_entity() {
                             Some(id) => match self.session.get_entity_guid(id) {
-                                Some(guid) => self.session.attack(guid),
+                                Some(guid) => {
+                                    self.session.attack(guid);
+                                    self.session.update();
+                                },
                                 None => (),
                             },
                             None => (),
@@ -506,7 +521,10 @@ impl Runner {
                     else if self.popup_manager.will_look {
                         match self.popup_manager.entities_list.get_selected_entity() {
                             Some(id) => match self.session.get_entity_guid(id) {
-                                Some(guid) => self.session.look_entity(guid),
+                                Some(guid) => {
+                                    self.session.look_entity(guid);
+                                    self.session.update();
+                                },
                                 None => (),
                             },
                             None => (),
@@ -535,7 +553,7 @@ impl Runner {
                 event::KeyCode::Char(c) => match c {
                     'c' => self.session.connect(),
                     'd' => self.session.disconnect(),
-                    'l' => self.session.look_room(),
+                    'l' => self.session.update(),
                     'h' => self.display_keybinds(),
                     'a' => {
                         self.popup_manager.popup_mode = true;
@@ -549,10 +567,22 @@ impl Runner {
                     }
                     _ => (),
                 },
-                event::KeyCode::Up => self.session.r#move(model::Direction::N),
-                event::KeyCode::Down => self.session.r#move(model::Direction::S),
-                event::KeyCode::Right => self.session.r#move(model::Direction::E),
-                event::KeyCode::Left => self.session.r#move(model::Direction::W),
+                event::KeyCode::Up => {
+                    self.session.r#move(model::Direction::N);
+                    self.session.update();
+                },
+                event::KeyCode::Down => {
+                    self.session.r#move(model::Direction::S);
+                    self.session.update();
+                },
+                event::KeyCode::Right => {
+                    self.session.r#move(model::Direction::E);
+                    self.session.update();
+                },
+                event::KeyCode::Left => {
+                    self.session.r#move(model::Direction::W);
+                    self.session.update();
+                },
                 _ => (),
             },
         }

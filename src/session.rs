@@ -164,6 +164,27 @@ impl Session {
         }
     }
 
+    pub fn look_self(&mut self) {
+        match self.get_guid() {
+            Ok(guid) => match self.client.look_entity(guid.clone(), guid) {
+                Ok(entity) => match &mut self.status {
+                    Some(status) => {
+                        status.life = Some(entity.life);
+                        status.total_life = entity.total_life;
+                    }
+                    None => ()
+                },
+                Err(error) => self.error = Some(error),
+            },
+            Err(error) => self.error = Some(error),
+        }
+    }
+
+    pub fn update(&mut self){
+        self.look_room();
+        self.look_self();
+    }
+
     pub fn attack(&mut self, guid_dest: String) {
         match self.get_guid() {
             Ok(guid) => match self.client.attack(guid, guid_dest) {

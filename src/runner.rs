@@ -163,7 +163,10 @@ impl Runner {
         self.popup_manager.entities_list.entities = self.session.get_entities_keys();
     }
 
-    fn spawn_sender_thread(sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>, tick_rate_millis: u64) {
+    fn spawn_sender_thread(
+        sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>,
+        tick_rate_millis: u64,
+    ) {
         let tick_rate = time::Duration::from_millis(tick_rate_millis);
         let update_rate = time::Duration::from_millis(tick_rate_millis * 10);
 
@@ -421,6 +424,10 @@ impl Runner {
     fn handle_errors(&mut self) {
         match self.session.error.clone() {
             Some(err) => {
+                if matches!(err.detail.r#type, Some(model::ErrorType::Dead)) {
+                    self.session.disconnect();
+                }
+
                 self.popup_manager.popup_mode = true;
                 self.popup_manager.title = String::from("Error");
 

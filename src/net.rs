@@ -18,7 +18,7 @@ pub enum MunRequest {
 pub struct MunHttpClient {
     pub base_url: String,
     http_client: reqwest::blocking::Client,
-    tried_once: bool
+    tried_once: bool,
 }
 
 impl MunHttpClient {
@@ -77,7 +77,7 @@ impl MunHttpClient {
                         Err(_) => Err(model::Error::from_error_string(ERROR_SERDE.to_string())),
                     },
                 }
-            },
+            }
             Err(_) => {
                 if self.tried_once {
                     self.tried_once = false;
@@ -88,12 +88,11 @@ impl MunHttpClient {
                             message: ERROR_NETWORK.to_string(),
                         },
                     })
-                }
-                else {
+                } else {
                     self.tried_once = true;
                     self.send_request(request)
                 }
-            },
+            }
         }
     }
 
@@ -128,7 +127,11 @@ impl MunHttpClient {
         self.send_request::<model::Entity>(request)
     }
 
-    pub fn attack(&mut self, guid: String, guid_dest: String) -> Result<model::Fight, model::Error> {
+    pub fn attack(
+        &mut self,
+        guid: String,
+        guid_dest: String,
+    ) -> Result<model::Fight, model::Error> {
         let request = MunRequest::Post(
             format!("{}/{}/taper/{}", self.base_url, guid, guid_dest),
             String::new(),

@@ -163,9 +163,9 @@ impl Runner {
         self.popup_manager.entities_list.entities = self.session.get_entities_keys();
     }
 
-    fn spawn_sender_thread(sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>, tick_rate: u64) {
-        let tick_rate = time::Duration::from_millis(tick_rate);
-        let update_rate = time::Duration::from_secs(1);
+    fn spawn_sender_thread(sender: mpsc::Sender<ChannelEvent<event::KeyEvent>>, tick_rate_millis: u64) {
+        let tick_rate = time::Duration::from_millis(tick_rate_millis);
+        let update_rate = time::Duration::from_millis(tick_rate_millis * 10);
 
         thread::spawn(move || {
             let mut last_tick = time::Instant::now();
